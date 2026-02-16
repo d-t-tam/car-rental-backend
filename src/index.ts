@@ -1,4 +1,5 @@
 import { cors } from "@/configs/cors";
+import "dotenv/config";
 import express, { json } from "express";
 
 const application = express();

@@ -1,0 +1,173 @@
+@startuml database_schema
+
+skinparam linetype ortho
+
+' --- Users & Roles ---
+entity "User" as user {
+  *user_id : int <<generated>>
+  --
+  username : varchar(50)
+  password_hash : varchar(255)
+  email : varchar(100)
+  phone : varchar(20)
+  role : enum('Customer', 'Staff', 'Manager', 'Admin')
+  status : enum('Active', 'Inactive', 'Disabled')
+  created_at : datetime
+  updated_at : datetime
+}
+
+entity "CustomerProfile" as customer_profile {
+  *user_id : int <<FK>>
+  --
+  full_name : varchar(100)
+  license_number : varchar(50)
+  address : varchar(255)
+  wallet_balance : decimal(10,2)
+}
+
+
+entity "StaffProfile" as staff_profile {
+  *user_id : int <<FK>>
+  --
+  staff_code : varchar(50)
+}
+
+' --- Cars & Inventory ---
+entity "CarCategory" as car_category {
+  *category_id : int <<generated>>
+  --
+  name : varchar(100)
+  description : text
+  min_price : decimal(10,2)
+}
+
+entity "Car" as car {
+  *car_id : int <<generated>>
+  --
+  category_id : int <<FK>>
+  name : varchar(100)
+  brand : varchar(50)
+  model : varchar(50)
+  year : int
+  color : varchar(50)
+  license_plate : varchar(20)
+  vin_number : varchar(50)
+  status : enum('Available', 'Rented', 'Reserved', 'Maintenance', 'Disabled')
+  rental_price_per_day : decimal(10,2)
+  current_mileage : int
+  description : text
+  created_at : datetime
+  updated_at : datetime
+}
+
+entity "CarImage" as car_image {
+  *image_id : int <<generated>>
+  --
+  car_id : int <<FK>>
+  image_url : varchar(255)
+  is_thumbnail : boolean
+}
+
+' --- Bookings & Operations ---
+entity "Booking" as booking {
+  *booking_id : int <<generated>>
+  --
+  customer_id : int <<FK>>
+  car_id : int <<FK>>
+  start_date : datetime
+  end_date : datetime
+  total_price : decimal(10,2)
+  total_paid : decimal(10,2)
+  status : enum('Pending', 'Confirmed', 'Active', 'Completed', 'Cancelled', 'Deposit Paid')
+  payment_status : enum('Unpaid', 'Partially Paid', 'Paid', 'Refunded')
+  created_at : datetime
+  updated_at : datetime
+}
+
+entity "BookingInspection" as inspection {
+  *inspection_id : int <<generated>>
+  --
+  booking_id : int <<FK>>
+  staff_id : int <<FK>>
+  type : enum('Handover', 'Return')
+  inspection_date : datetime
+  odometer_reading : int
+  fuel_level : int
+  condition_summary : text
+  customer_signature_url : varchar(255)
+}
+
+entity "InspectionItem" as inspection_item {
+  *item_id : int <<generated>>
+  --
+  inspection_id : int <<FK>>
+  item_name : varchar(50)
+  status : enum('OK', 'Damaged', 'Missing')
+  notes : text
+  photo_url : varchar(255)
+}
+
+' --- Finance ---
+entity "Transaction" as transaction {
+  *transaction_id : int <<generated>>
+  --
+  booking_id : int <<FK>>
+  amount : decimal(10,2)
+  type : enum('Payment', 'Refund', 'Deposit', 'Penalty')
+  payment_method : enum('Cash', 'Banking', 'E-Wallet', 'Wallet')
+  gateway_txn_id : varchar(100)
+  status : enum('Pending', 'Success', 'Failed')
+  transaction_date : datetime
+  notes : text
+}
+
+entity "Feedback" as feedback {
+  *feedback_id : int <<generated>>
+  --
+  booking_id : int <<FK>>
+  customer_id : int <<FK>>
+  rating : int
+  comment : text
+  created_at : datetime
+}
+
+entity "Notification" as notification {
+  *notification_id : int <<generated>>
+  --
+  user_id : int <<FK>>
+  title : varchar(100)
+  message : text
+  type : enum('Booking', 'Payment', 'System')
+  is_read : boolean
+  created_at : datetime
+}
+
+' --- Relationships ---
+
+' User Inheritance
+user ||..o| customer_profile : "is"
+user ||..o| staff_profile : "is"
+
+' Car Organization
+car_category ||..o{ car : "classifies"
+car ||..o{ car_image : "has"
+
+' Booking Flow
+customer_profile ||..o{ booking : "makes"
+car ||..o{ booking : "is booked"
+
+' Operations
+booking ||..o{ inspection : "undergoes"
+
+staff_profile ||..o{ inspection : "conducts"
+inspection ||..o{ inspection_item : "details"
+
+' Finance
+booking ||..o{ transaction : "financials"
+booking ||..o| feedback : "reviewed by"
+
+' System
+user ||..o{ notification : "receives"
+
+@enduml
+
