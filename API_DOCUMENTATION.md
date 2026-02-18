@@ -232,3 +232,67 @@ Get detailed information about a specific car, including recent active bookings.
   "message": "Car not found"
 }
 ```
+---
+
+## Bookings
+
+### UC04: Book Car (Customer)
+
+Submit a request to book a car for a specific rental period.
+
+- **URL**: `/bookings`
+- **Method**: `POST`
+- **Content-Type**: `application/json`
+- **Authentication**: Required (JWT Token in Authorization Header)
+
+**Request Body**
+
+```json
+{
+  "car_id": 1,
+  "start_date": "2024-03-01T09:00:00Z",
+  "end_date": "2024-03-03T17:00:00Z"
+}
+```
+
+**Success Response**
+
+- **Code**: `201 Created`
+- **Content**:
+
+```json
+{
+  "message": "Booking created successfully",
+  "booking": {
+    "booking_id": 1,
+    "customer_id": 1,
+    "car_id": 1,
+    "start_date": "2024-03-01T09:00:00.000Z",
+    "end_date": "2024-03-03T17:00:00.000Z",
+    "total_price": "300.00",
+    "total_paid": "0.00",
+    "status": "Pending",
+    "payment_status": "Unpaid",
+    "created_at": "2024-02-18T22:40:00.000Z",
+    "updated_at": "2024-02-18T22:40:00.000Z",
+    "car": { "car_id": 1, "name": "Toyota Camry", "...": "..." },
+    "customer": { "user_id": 1, "full_name": "John Doe", "...": "..." }
+  }
+}
+```
+
+**Error Responses**
+
+- **Code**: `400 Bad Request`
+- **Content**:
+  ```json
+  { "message": "The car is already booked for the selected timeframe" }
+  ```
+- **Code**: `401 Unauthorized`
+  ```json
+  { "message": "Access denied. No token provided." }
+  ```
+- **Code**: `404 Not Found`
+  ```json
+  { "message": "Car not found" }
+  ```
