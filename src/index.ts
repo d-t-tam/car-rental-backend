@@ -1,4 +1,5 @@
 import { authRoutes } from "@/routes/auth.routes";
+import { carRoutes } from "@/routes/car.routes";
 import { cors } from "@/configs/cors";
 import { ENV } from "@/configs/env";
 import express, { json } from "express";
@@ -9,6 +10,7 @@ application.use(cors());
 application.use(json());
 
 application.use("/api/auth", authRoutes);
+application.use("/api/cars", carRoutes);
 
 const SERVER_PORT = ENV.SERVER_PORT;
 

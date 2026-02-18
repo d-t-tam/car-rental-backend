@@ -4,7 +4,7 @@ Base URL: `http://localhost:3000/api` (assuming default port 3000 based on ENV)
 
 ## Authentication
 
-### Register
+### UC16: Register (Guest)
 
 Create a new customer account.
 
@@ -69,7 +69,7 @@ Create a new customer account.
 
 ---
 
-### Login
+### UC01: Login (Guest/Customer/Staff/Admin)
 
 Authenticate a user and retrieve a JWT token.
 
@@ -120,5 +120,115 @@ OR
 ```json
 {
   "message": "User account is not active"
+}
+```
+
+---
+
+## Cars
+
+### UC17: View List Car / UC19: Search Car
+
+Search for cars based on various criteria or list all available cars.
+
+- **URL**: `/cars/search`
+- **Method**: `GET`
+- **Query Parameters**:
+  - `name`: (Optional) Search by car name (case-insensitive)
+  - `brand`: (Optional) Search by brand (case-insensitive)
+  - `model`: (Optional) Search by model (case-insensitive)
+  - `category_id`: (Optional) Filter by category ID
+  - `min_price`: (Optional) Minimum rental price per day
+  - `max_price`: (Optional) Maximum rental price per day
+  - `status`: (Optional) Filter by status (`Available`, `Rented`, `Reserved`, `Maintenance`, `Disabled`)
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+[
+  {
+    "car_id": 1,
+    "category_id": 1,
+    "name": "Toyota Camry",
+    "brand": "Toyota",
+    "model": "Camry",
+    "year": 2022,
+    "color": "Black",
+    "license_plate": "ABC-123",
+    "vin_number": "VIN123456",
+    "status": "Available",
+    "rental_price_per_day": 500.0,
+    "current_mileage": 1000,
+    "description": "Clean and well maintained",
+    "created_at": "2024-01-01T00:00:00.000Z",
+    "updated_at": "2024-01-01T00:00:00.000Z",
+    "category": {
+      "category_id": 1,
+      "name": "Sedan",
+      "description": "Standard sedan",
+      "min_price": 300.0
+    },
+    "images": [
+      {
+        "image_id": 1,
+        "car_id": 1,
+        "image_url": "http://example.com/image.jpg",
+        "is_thumbnail": true
+      }
+    ]
+  }
+]
+```
+
+---
+
+### UC18: View Car Detail
+
+Get detailed information about a specific car, including recent active bookings.
+
+- **URL**: `/cars/:id`
+- **Method**: `GET`
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+{
+  "car_id": 1,
+  "category_id": 1,
+  "name": "Tesla Model 3",
+  "brand": "Tesla",
+  "model": "Model 3",
+  "year": 2023,
+  "color": "White",
+  "rental_price_per_day": "150.00",
+  "category": { "name": "Electric", "min_price": "100.00" },
+  "images": [ { "image_url": "...", "is_thumbnail": true } ],
+  "bookings": [
+    {
+      "booking_id": 10,
+      "status": "Active",
+      "customer": {
+        "full_name": "John Doe",
+        "user": { "username": "johndoe", "email": "john@example.com", "phone": "0123456789" }
+      }
+    }
+  ]
+}
+```
+
+**Error Response**
+
+- **Code**: `404 Not Found`
+- **Content**:
+
+```json
+{
+  "message": "Car not found"
 }
 ```
