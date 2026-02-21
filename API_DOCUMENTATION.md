@@ -125,6 +125,96 @@ OR
 
 ---
 
+### UC03: Manage Profile (Customer)
+
+Get and update the authenticated customer's profile.
+
+#### Get Profile
+
+- **URL**: `/profile`
+- **Method**: `GET`
+- **Authentication**: Required (JWT Token in Authorization Header)
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+{
+  "user": {
+    "user_id": 1,
+    "email": "user@example.com",
+    "username": "user123",
+    "phone": "1234567890",
+    "role": "Customer",
+    "status": "Active",
+    "created_at": "2024-01-01T00:00:00.000Z"
+  },
+  "profile": {
+    "user_id": 1,
+    "full_name": "John Doe",
+    "license_number": "A1234567",
+    "address": "123 Main St",
+    "wallet_balance": "0.00"
+  }
+}
+```
+
+#### Update Profile
+
+- **URL**: `/profile`
+- **Method**: `PUT`
+- **Content-Type**: `application/json`
+- **Authentication**: Required (JWT Token in Authorization Header)
+
+**Request Body**
+
+```json
+{
+  "full_name": "John Doe",
+  "phone": "1234567890",
+  "license_number": "A1234567",
+  "address": "123 Main St"
+}
+```
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+{
+  "user": {
+    "user_id": 1,
+    "email": "user@example.com",
+    "username": "user123",
+    "phone": "1234567890",
+    "role": "Customer",
+    "status": "Active",
+    "created_at": "2024-01-01T00:00:00.000Z"
+  },
+  "profile": {
+    "user_id": 1,
+    "full_name": "John Doe",
+    "license_number": "A1234567",
+    "address": "123 Main St",
+    "wallet_balance": "0.00"
+  }
+}
+```
+
+**Error Response**
+
+- **Code**: `401 Unauthorized`
+- **Content**:
+  ```json
+  { "message": "Access denied. No token provided." }
+  ```
+
+---
+
 ## Cars
 
 ### UC17: View List Car / UC19: Search Car

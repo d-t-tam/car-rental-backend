@@ -1,6 +1,7 @@
 import { authRoutes } from "@/routes/auth.routes";
 import { carRoutes } from "@/routes/car.routes";
 import { bookingRoutes } from "@/routes/booking.routes";
+import { profileRoutes } from "@/routes/profile.routes";
 import { cors } from "@/configs/cors";
 import { ENV } from "@/configs/env";
 import express, { json } from "express";
@@ -13,6 +14,7 @@ application.use(json());
 application.use("/api/auth", authRoutes);
 application.use("/api/cars", carRoutes);
 application.use("/api/bookings", bookingRoutes);
+application.use("/api", profileRoutes);
 
 const SERVER_PORT = ENV.SERVER_PORT;
 

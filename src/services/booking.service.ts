@@ -13,8 +13,8 @@ export class BookingService {
         const start = new Date(start_date);
         const end = new Date(end_date);
 
-        if (start >= end) {
-            throw new Error("Start date must be before end date");
+        if (start > end) {
+            throw new Error("Start date must be before or equal to end date");
         }
 
         // 1. Check if car exists and is not disabled
@@ -51,7 +51,7 @@ export class BookingService {
 
         // 3. Calculate price
         const diffTime = Math.abs(end.getTime() - start.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         const totalPrice = new Prisma.Decimal(car.rental_price_per_day).mul(diffDays);
 
         // 4. Create booking
