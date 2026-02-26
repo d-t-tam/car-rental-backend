@@ -118,4 +118,35 @@ export class BookingService {
             }
         });
     }
+
+    static async cancelBooking(booking_id: number, customer_id: number) {
+        const booking = await prisma.booking.findUnique({
+            where: { booking_id }
+        });
+
+        if (!booking) {
+            throw new Error("Booking not found");
+        }
+
+        if (booking.customer_id !== customer_id) {
+            throw new Error("You are not authorized to cancel this booking");
+        }
+
+        const allowableStatuses: BookingStatus[] = [
+            BookingStatus.Pending,
+            BookingStatus.Confirmed,
+            BookingStatus.Deposit_Paid
+        ];
+
+        if (!allowableStatuses.includes(booking.status)) {
+            throw new Error(`Cannot cancel booking with status: ${booking.status}`);
+        }
+
+        return await prisma.booking.update({
+            where: { booking_id },
+            data: {
+                status: BookingStatus.Cancelled
+            }
+        });
+    }
 }

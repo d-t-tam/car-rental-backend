@@ -178,8 +178,33 @@ Retrieve the list of all bookings made by the authenticated customer.
 ```
 
 ---
-
-### Get Booked Dates
+ 
+ ### UC05: Cancel Booking (Customer)
+ 
+ Cancel a booking before car pickup.
+ 
+ - **URL**: `/bookings/:id/cancel`
+ - **Method**: `PATCH`
+ - **Authentication**: Required (JWT Token in Authorization Header)
+ 
+ **Success Response**
+ 
+ - **Code**: `200 OK`
+ - **Content**:
+ 
+ ```json
+ {
+   "message": "Booking cancelled successfully",
+   "booking": {
+     "booking_id": 1,
+     "status": "Cancelled"
+   }
+ }
+ ```
+ 
+ ---
+ 
+ ### Get Booked Dates
 
 Retrieve all occupied date ranges for a specific car (used to disable dates in the UI).
 

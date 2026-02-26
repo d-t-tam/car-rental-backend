@@ -57,4 +57,25 @@ export class BookingController {
             return res.status(400).json({ message: error.message || "Failed to fetch booking history" });
         }
     }
+
+    static async cancel(req: BuildRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const customer_id = req.user.userId;
+
+            if (!id) {
+                return res.status(400).json({ message: "Booking ID is required" });
+            }
+
+            const booking = await BookingService.cancelBooking(Number(id), customer_id);
+
+            return res.status(200).json({
+                message: "Booking cancelled successfully",
+                booking
+            });
+        } catch (error: any) {
+            console.error("Cancel Booking Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to cancel booking" });
+        }
+    }
 }
