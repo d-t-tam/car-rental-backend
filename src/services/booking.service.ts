@@ -72,4 +72,50 @@ export class BookingService {
             }
         });
     }
+
+    static async getBookedDates(car_id: number) {
+        return await prisma.booking.findMany({
+            where: {
+                car_id,
+                status: {
+                    in: [
+                        BookingStatus.Pending,
+                        BookingStatus.Confirmed,
+                        BookingStatus.Active,
+                        BookingStatus.Deposit_Paid
+                    ]
+                }
+            },
+            select: {
+                start_date: true,
+                end_date: true
+            },
+            orderBy: {
+                start_date: 'asc'
+            }
+        });
+    }
+
+    static async getCustomerBookings(customer_id: number) {
+        return await prisma.booking.findMany({
+            where: {
+                customer_id
+            },
+            include: {
+                car: {
+                    include: {
+                        images: {
+                            where: {
+                                is_thumbnail: true
+                            }
+                        },
+                        category: true
+                    }
+                }
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+    }
 }
