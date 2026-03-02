@@ -1,0 +1,28 @@
+
+--- Starting Staff Booking Approval Test ---
+--- Setting up Test Data ---
+Staff user ensured: staff_test@example.com
+Customer user ensured: user@example.com
+Cars ensured.
+Conflicting bookings cleared.
+
+1. Logging in as Customer...
+Customer logged in.
+
+2. Logging in as Staff...
+Staff logged in.
+
+3. Creating a booking as Customer...
+Booking created with ID: 15, Status: Pending
+
+4. Attempting to approve booking as Customer (should fail)...
+SUCCESS: Approval failed as expected (403). Status: 403
+
+5. Approving booking as Staff (should succeed)...
+SUCCESS: Booking approved. New status: Confirmed
+
+6. Creating another booking for rejection test...
+Booking 2 created with ID: 16
+
+7. Rejecting booking as Staff...
+SUCCESS: Booking rejected. New status: Cancelled

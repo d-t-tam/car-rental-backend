@@ -58,7 +58,7 @@ Create a new customer account.
 
 ### UC01: Login (Guest/Customer/Staff/Admin)
 
-Authenticate a user and retrieve a JWT token.
+Authenticate a user (Guest, Customer, Staff, or Admin) and retrieve a JWT token.
 
 - **URL**: `/auth/login`
 - **Method**: `POST`
@@ -87,6 +87,25 @@ Authenticate a user and retrieve a JWT token.
     "email": "user@example.com",
     "username": "user123",
     "role": "Customer",
+    "status": "Active"
+  }
+}
+```
+
+**Staff Success Response Example**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "user_id": 2,
+    "email": "staff@example.com",
+    "username": "staff_member",
+    "role": "Staff",
     "status": "Active"
   }
 }
@@ -210,3 +229,130 @@ Retrieve all occupied date ranges for a specific car (used to disable dates in t
 
 - **URL**: `/bookings/car/:car_id/booked-dates`
 - **Method**: `GET`
+
+---
+
+### UC14: Approve Booking (Staff/Admin)
+
+Review and approve a pending booking request.
+
+- **URL**: `/bookings/pending`
+- **Method**: `GET`
+- **Authentication**: Required (Staff/Admin role)
+
+**Pending List Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+[
+  {
+    "booking_id": 12,
+    "customer_id": 3,
+    "car_id": 7,
+    "start_date": "2026-03-10T00:00:00.000Z",
+    "end_date": "2026-03-12T00:00:00.000Z",
+    "total_price": "450.00",
+    "status": "Pending",
+    "car": {
+      "name": "Toyota Vios",
+      "category": { "name": "Sedan" },
+      "images": [{ "image_url": "...", "is_thumbnail": true }]
+    },
+    "customer": {
+      "full_name": "Nguyen Van A",
+      "user": { "email": "customer@example.com", "username": "customer01" }
+    }
+  }
+]
+```
+
+---
+
+- **URL**: `/bookings/review-history`
+- **Method**: `GET`
+- **Authentication**: Required (Staff/Admin role)
+
+Retrieve booking requests already processed by staff (Approved/Rejected).
+
+**Review History Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+[
+  {
+    "booking_id": 11,
+    "status": "Confirmed",
+    "updated_at": "2026-03-02T10:20:00.000Z",
+    "car": {
+      "name": "Honda City",
+      "category": { "name": "Sedan" }
+    },
+    "customer": {
+      "full_name": "Tran Thi B",
+      "user": { "email": "customer2@example.com" }
+    }
+  },
+  {
+    "booking_id": 10,
+    "status": "Cancelled",
+    "updated_at": "2026-03-02T09:45:00.000Z"
+  }
+]
+```
+
+---
+
+- **URL**: `/bookings/:id/approve`
+- **Method**: `PATCH`
+- **Authentication**: Required (Staff/Admin role)
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+{
+  "message": "Booking approved successfully",
+  "booking": {
+    "booking_id": 1,
+    "status": "Confirmed"
+  }
+}
+```
+
+---
+
+### UC14: Reject Booking (Staff/Admin)
+
+Review and reject a pending booking request.
+
+- **URL**: `/bookings/:id/reject`
+- **Method**: `PATCH`
+- **Authentication**: Required (Staff/Admin role)
+- **Request Body**:
+
+```json
+{
+  "reason": "Car is under maintenance"
+}
+```
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+{
+  "message": "Booking rejected successfully",
+  "booking": {
+    "booking_id": 1,
+    "status": "Cancelled"
+  }
+}
+```

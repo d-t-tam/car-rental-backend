@@ -3,6 +3,26 @@ import { BuildRequest } from "../middlewares/auth.middleware";
 import { BookingService } from "../services/booking.service";
 
 export class BookingController {
+    static async getPending(req: BuildRequest, res: Response) {
+        try {
+            const bookings = await BookingService.getPendingBookings();
+            return res.status(200).json(bookings);
+        } catch (error: any) {
+            console.error("Get Pending Bookings Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to fetch pending bookings" });
+        }
+    }
+
+    static async getReviewHistory(req: BuildRequest, res: Response) {
+        try {
+            const bookings = await BookingService.getReviewHistoryBookings();
+            return res.status(200).json(bookings);
+        } catch (error: any) {
+            console.error("Get Review History Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to fetch review history" });
+        }
+    }
+
     static async create(req: BuildRequest, res: Response) {
         try {
             const { car_id, start_date, end_date } = req.body;
@@ -58,6 +78,7 @@ export class BookingController {
         }
     }
 
+
     static async cancel(req: BuildRequest, res: Response) {
         try {
             const { id } = req.params;
@@ -76,6 +97,45 @@ export class BookingController {
         } catch (error: any) {
             console.error("Cancel Booking Error:", error);
             return res.status(400).json({ message: error.message || "Failed to cancel booking" });
+        }
+    }
+
+    static async approve(req: BuildRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                return res.status(400).json({ message: "Booking ID is required" });
+            }
+
+            const booking = await BookingService.approveBooking(Number(id));
+
+            return res.status(200).json({
+                message: "Booking approved successfully",
+                booking
+            });
+        } catch (error: any) {
+            console.error("Approve Booking Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to approve booking" });
+        }
+    }
+
+    static async reject(req: BuildRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const { reason } = req.body;
+            if (!id) {
+                return res.status(400).json({ message: "Booking ID is required" });
+            }
+
+            const booking = await BookingService.rejectBooking(Number(id), reason);
+
+            return res.status(200).json({
+                message: "Booking rejected successfully",
+                booking
+            });
+        } catch (error: any) {
+            console.error("Reject Booking Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to reject booking" });
         }
     }
 }

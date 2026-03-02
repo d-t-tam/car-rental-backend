@@ -3,6 +3,78 @@ import { BookingStatus, PaymentStatus, CarStatus } from "../generated/prisma";
 import { Prisma } from "../generated/prisma";
 
 export class BookingService {
+    static async getPendingBookings() {
+        return await prisma.booking.findMany({
+            where: {
+                status: BookingStatus.Pending,
+            },
+            include: {
+                car: {
+                    include: {
+                        category: true,
+                        images: {
+                            where: {
+                                is_thumbnail: true,
+                            },
+                            take: 1,
+                        },
+                    },
+                },
+                customer: {
+                    include: {
+                        user: {
+                            select: {
+                                email: true,
+                                username: true,
+                                phone: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                created_at: "asc",
+            },
+        });
+    }
+
+    static async getReviewHistoryBookings() {
+        return await prisma.booking.findMany({
+            where: {
+                status: {
+                    in: [BookingStatus.Confirmed, BookingStatus.Cancelled],
+                },
+            },
+            include: {
+                car: {
+                    include: {
+                        category: true,
+                        images: {
+                            where: {
+                                is_thumbnail: true,
+                            },
+                            take: 1,
+                        },
+                    },
+                },
+                customer: {
+                    include: {
+                        user: {
+                            select: {
+                                email: true,
+                                username: true,
+                                phone: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                updated_at: "desc",
+            },
+        });
+    }
+
     static async createBooking(data: {
         customer_id: number;
         car_id: number;
@@ -140,6 +212,48 @@ export class BookingService {
 
         if (!allowableStatuses.includes(booking.status)) {
             throw new Error(`Cannot cancel booking with status: ${booking.status}`);
+        }
+
+        return await prisma.booking.update({
+            where: { booking_id },
+            data: {
+                status: BookingStatus.Cancelled
+            }
+        });
+    }
+
+    static async approveBooking(booking_id: number) {
+        const booking = await prisma.booking.findUnique({
+            where: { booking_id }
+        });
+
+        if (!booking) {
+            throw new Error("Booking not found");
+        }
+
+        if (booking.status !== BookingStatus.Pending) {
+            throw new Error(`Only pending bookings can be approved. Current status: ${booking.status}`);
+        }
+
+        return await prisma.booking.update({
+            where: { booking_id },
+            data: {
+                status: BookingStatus.Confirmed
+            }
+        });
+    }
+
+    static async rejectBooking(booking_id: number, reason?: string) {
+        const booking = await prisma.booking.findUnique({
+            where: { booking_id }
+        });
+
+        if (!booking) {
+            throw new Error("Booking not found");
+        }
+
+        if (booking.status !== BookingStatus.Pending) {
+            throw new Error(`Only pending bookings can be rejected. Current status: ${booking.status}`);
         }
 
         return await prisma.booking.update({
