@@ -156,6 +156,21 @@ Get detailed information about a specific car, including recent active bookings.
 
 ## Bookings
 
+### System Rule: Auto-Cancel No-Show Booking
+
+The backend runs a cron job to auto-cancel bookings when customers do not pick up the car on time.
+
+- Applies to booking status: `Confirmed`, `Deposit Paid`
+- Auto-update status to: `Cancelled`
+- Condition: `start_date` has passed by configured grace period
+- No API call is required; this runs automatically in backend
+
+Environment variables:
+
+- `BOOKING_NO_SHOW_CRON` (default: `*/30 * * * *`)
+- `BOOKING_NO_SHOW_GRACE_HOURS` (default: `2`)
+- `BOOKING_NO_SHOW_TIMEZONE` (default: `Asia/Bangkok`)
+
 ### UC04: Book Car (Customer)
 
 Submit a request to book a car for a specific rental period.
@@ -229,6 +244,84 @@ Retrieve all occupied date ranges for a specific car (used to disable dates in t
 
 - **URL**: `/bookings/car/:car_id/booked-dates`
 - **Method**: `GET`
+
+---
+
+### UC15: Handover Queue (Staff/Admin)
+
+Get bookings ready for car handover (already approved by staff/admin).
+
+- **URL**: `/bookings/handover-ready`
+- **Method**: `GET`
+- **Authentication**: Required (Staff/Admin role)
+
+**Rules**
+
+- Booking statuses in queue: `Confirmed`, `Deposit Paid`
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+[
+  {
+    "booking_id": 21,
+    "status": "Confirmed",
+    "start_date": "2026-03-20T00:00:00.000Z",
+    "end_date": "2026-03-22T00:00:00.000Z",
+    "car": {
+      "name": "Toyota Vios",
+      "current_mileage": 12500,
+      "category": { "name": "Sedan" }
+    },
+    "customer": {
+      "full_name": "Nguyen Van A",
+      "user": { "email": "customer@example.com" }
+    }
+  }
+]
+```
+
+---
+
+### UC15: Return Queue (Staff/Admin)
+
+Get bookings ready for return intake (cars already handed over to customers).
+
+- **URL**: `/bookings/return-ready`
+- **Method**: `GET`
+- **Authentication**: Required (Staff/Admin role)
+
+**Rules**
+
+- Booking status in queue: `Active`
+
+**Success Response**
+
+- **Code**: `200 OK`
+- **Content**:
+
+```json
+[
+  {
+    "booking_id": 22,
+    "status": "Active",
+    "start_date": "2026-03-18T00:00:00.000Z",
+    "end_date": "2026-03-19T00:00:00.000Z",
+    "car": {
+      "name": "Honda City",
+      "current_mileage": 22000,
+      "category": { "name": "Sedan" }
+    },
+    "customer": {
+      "full_name": "Tran Thi B",
+      "user": { "email": "customer2@example.com" }
+    }
+  }
+]
+```
 
 ---
 
@@ -353,6 +446,111 @@ Review and reject a pending booking request.
   "booking": {
     "booking_id": 1,
     "status": "Cancelled"
+  }
+}
+```
+
+---
+
+### UC15: Car Handover (Staff/Admin)
+
+Record the vehicle handover checklist when staff delivers a car to customer.
+
+- **URL**: `/bookings/:id/handover`
+- **Method**: `POST`
+- **Authentication**: Required (Staff/Admin role)
+- **Content-Type**: `application/json`
+
+**Request Body**
+
+```json
+{
+  "odometer_reading": 12500,
+  "fuel_level": 80,
+  "condition_summary": "Exterior and interior in good condition",
+  "customer_signature_url": "https://example.com/signatures/handover-1.png",
+  "items": [
+    { "item_name": "Front bumper", "status": "OK", "notes": "No scratch" },
+    { "item_name": "Spare tire", "status": "OK" },
+    { "item_name": "Floor mat", "status": "Missing", "notes": "Missing rear-right mat" }
+  ]
+}
+```
+
+**Business Rules**
+
+- Booking status must be `Confirmed` or `Deposit Paid`.
+- System creates a `Handover` inspection record.
+- Booking status is updated to `Active`.
+- Car status is updated to `Rented`.
+- One handover inspection per booking.
+
+**Success Response**
+
+- **Code**: `201 Created`
+- **Content**:
+
+```json
+{
+  "message": "Car handover recorded successfully",
+  "inspection": {
+    "inspection_id": 10,
+    "booking_id": 1,
+    "type": "Handover",
+    "odometer_reading": 12500,
+    "fuel_level": 80
+  }
+}
+```
+
+---
+
+### UC15: Car Return Intake (Staff/Admin)
+
+Record the return checklist when customer returns the car and staff receives it.
+
+- **URL**: `/bookings/:id/return`
+- **Method**: `POST`
+- **Authentication**: Required (Staff/Admin role)
+- **Content-Type**: `application/json`
+
+**Request Body**
+
+```json
+{
+  "odometer_reading": 12840,
+  "fuel_level": 45,
+  "condition_summary": "Rear bumper scratched",
+  "customer_signature_url": "https://example.com/signatures/return-1.png",
+  "items": [
+    { "item_name": "Rear bumper", "status": "Damaged", "notes": "Scratch on right side" },
+    { "item_name": "Spare tire", "status": "OK" }
+  ]
+}
+```
+
+**Business Rules**
+
+- Booking status must be `Active`.
+- System creates a `Return` inspection record.
+- Booking status is updated to `Completed`.
+- Car status is updated to `Available`.
+- One return inspection per booking.
+
+**Success Response**
+
+- **Code**: `201 Created`
+- **Content**:
+
+```json
+{
+  "message": "Car return recorded successfully",
+  "inspection": {
+    "inspection_id": 11,
+    "booking_id": 1,
+    "type": "Return",
+    "odometer_reading": 12840,
+    "fuel_level": 45
   }
 }
 ```

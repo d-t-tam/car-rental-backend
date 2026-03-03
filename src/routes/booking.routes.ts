@@ -11,9 +11,13 @@ router.patch("/:id/cancel", authenticate, BookingController.cancel);
 router.get("/car/:car_id/booked-dates", BookingController.getBookedDates);
 
 // Staff / Admin Only
+router.get("/handover-ready", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.getHandoverReady);
+router.get("/return-ready", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.getReturnReady);
 router.get("/pending", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.getPending);
 router.get("/review-history", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.getReviewHistory);
 router.patch("/:id/approve", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.approve);
 router.patch("/:id/reject", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.reject);
+router.post("/:id/handover", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.handoverCar);
+router.post("/:id/return", authenticate, authorize(UserRole.Staff, UserRole.Admin), BookingController.receiveReturnedCar);
 
 export const bookingRoutes = router;

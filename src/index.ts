@@ -4,6 +4,7 @@ import { bookingRoutes } from "@/routes/booking.routes";
 import { profileRoutes } from "@/routes/profile.routes";
 import { cors } from "@/configs/cors";
 import { ENV } from "@/configs/env";
+import { startBookingNoShowCron } from "@/jobs/booking-no-show.job";
 import express, { json } from "express";
 
 const application = express();
@@ -20,4 +21,5 @@ const SERVER_PORT = ENV.SERVER_PORT;
 
 application.listen(SERVER_PORT, () => {
   console.log(`Server is running on port ${SERVER_PORT}`);
+  startBookingNoShowCron();
 });

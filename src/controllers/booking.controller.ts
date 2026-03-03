@@ -3,6 +3,26 @@ import { BuildRequest } from "../middlewares/auth.middleware";
 import { BookingService } from "../services/booking.service";
 
 export class BookingController {
+    static async getHandoverReady(req: BuildRequest, res: Response) {
+        try {
+            const bookings = await BookingService.getHandoverReadyBookings();
+            return res.status(200).json(bookings);
+        } catch (error: any) {
+            console.error("Get Handover Ready Bookings Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to fetch handover-ready bookings" });
+        }
+    }
+
+    static async getReturnReady(req: BuildRequest, res: Response) {
+        try {
+            const bookings = await BookingService.getReturnReadyBookings();
+            return res.status(200).json(bookings);
+        } catch (error: any) {
+            console.error("Get Return Ready Bookings Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to fetch return-ready bookings" });
+        }
+    }
+
     static async getPending(req: BuildRequest, res: Response) {
         try {
             const bookings = await BookingService.getPendingBookings();
@@ -136,6 +156,80 @@ export class BookingController {
         } catch (error: any) {
             console.error("Reject Booking Error:", error);
             return res.status(400).json({ message: error.message || "Failed to reject booking" });
+        }
+    }
+
+    static async handoverCar(req: BuildRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const {
+                odometer_reading,
+                fuel_level,
+                condition_summary,
+                customer_signature_url,
+                items,
+            } = req.body;
+
+            if (!id) {
+                return res.status(400).json({ message: "Booking ID is required" });
+            }
+
+            if (odometer_reading === undefined || fuel_level === undefined) {
+                return res.status(400).json({ message: "odometer_reading and fuel_level are required" });
+            }
+
+            const inspection = await BookingService.handoverCar(Number(id), req.user.userId, {
+                odometer_reading: Number(odometer_reading),
+                fuel_level: Number(fuel_level),
+                condition_summary,
+                customer_signature_url,
+                items,
+            });
+
+            return res.status(201).json({
+                message: "Car handover recorded successfully",
+                inspection,
+            });
+        } catch (error: any) {
+            console.error("Handover Car Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to record handover" });
+        }
+    }
+
+    static async receiveReturnedCar(req: BuildRequest, res: Response) {
+        try {
+            const { id } = req.params;
+            const {
+                odometer_reading,
+                fuel_level,
+                condition_summary,
+                customer_signature_url,
+                items,
+            } = req.body;
+
+            if (!id) {
+                return res.status(400).json({ message: "Booking ID is required" });
+            }
+
+            if (odometer_reading === undefined || fuel_level === undefined) {
+                return res.status(400).json({ message: "odometer_reading and fuel_level are required" });
+            }
+
+            const inspection = await BookingService.receiveReturnedCar(Number(id), req.user.userId, {
+                odometer_reading: Number(odometer_reading),
+                fuel_level: Number(fuel_level),
+                condition_summary,
+                customer_signature_url,
+                items,
+            });
+
+            return res.status(201).json({
+                message: "Car return recorded successfully",
+                inspection,
+            });
+        } catch (error: any) {
+            console.error("Receive Returned Car Error:", error);
+            return res.status(400).json({ message: error.message || "Failed to record car return" });
         }
     }
 }
