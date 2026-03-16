@@ -1,6 +1,5 @@
 import { ENV } from "@/configs/env";
-import jwt from "jsonwebtoken";
-import type { SignOptions } from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 
 const SECRET = ENV.JWT_SECRET;
 

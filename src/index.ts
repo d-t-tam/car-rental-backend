@@ -2,6 +2,7 @@ import { authRoutes } from "@/routes/auth.routes";
 import { carRoutes } from "@/routes/car.routes";
 import { bookingRoutes } from "@/routes/booking.routes";
 import { profileRoutes } from "@/routes/profile.routes";
+import { paymentRoutes } from "@/routes/payment.routes";
 import { cors } from "@/configs/cors";
 import { ENV } from "@/configs/env";
 import { startBookingNoShowCron } from "@/jobs/booking-no-show.job";
@@ -15,6 +16,7 @@ application.use(json());
 application.use("/api/auth", authRoutes);
 application.use("/api/cars", carRoutes);
 application.use("/api/bookings", bookingRoutes);
+application.use("/api/payments", paymentRoutes);
 application.use("/api", profileRoutes);
 
 const SERVER_PORT = ENV.SERVER_PORT;
