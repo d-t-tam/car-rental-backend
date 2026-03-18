@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { ENV } from "@/configs/env";
 import { BookingService } from "@/services/booking.service";
 
+const bookingService = new BookingService();
 let isRunning = false;
 
 async function runNoShowCancellation() {
@@ -11,7 +12,7 @@ async function runNoShowCancellation() {
 
     isRunning = true;
     try {
-        const { cancelledCount, threshold } = await BookingService.autoCancelNoShowBookings(
+        const { cancelledCount, threshold } = await bookingService.autoCancelNoShowBookings(
             ENV.BOOKING_NO_SHOW_GRACE_HOURS
         );
 

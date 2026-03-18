@@ -1,160 +1,39 @@
 import { prisma } from "../configs/prisma";
-import { BookingStatus, PaymentStatus, CarStatus, InspectionType, ItemStatus } from "../generated/prisma";
+import { BookingRepository, InspectionItemInput } from "../repository/booking.repository";
+import { CarRepository } from "../repository/car.repository";
+import { UserRepository } from "../repository/user.repository";
+import { BookingStatus, CarStatus, InspectionType } from "../generated/prisma";
 import { Prisma } from "../generated/prisma";
-
-type InspectionItemInput = {
-    item_name: string;
-    status: ItemStatus;
-    notes?: string;
-    photo_url?: string;
-};
+import { NotFoundError } from "../repository/errors";
 
 export class BookingService {
-    static async getHandoverReadyBookings() {
-        return await prisma.booking.findMany({
-            where: {
-                status: {
-                    in: [BookingStatus.Confirmed, BookingStatus.Deposit_Paid],
-                },
-            },
-            include: {
-                car: {
-                    include: {
-                        category: true,
-                        images: {
-                            where: {
-                                is_thumbnail: true,
-                            },
-                            take: 1,
-                        },
-                    },
-                },
-                customer: {
-                    include: {
-                        user: {
-                            select: {
-                                email: true,
-                                username: true,
-                                phone: true,
-                            },
-                        },
-                    },
-                },
-            },
-            orderBy: {
-                updated_at: "asc",
-            },
-        });
+    private bookingRepo: BookingRepository;
+    private carRepo: CarRepository;
+    private userRepo: UserRepository;
+
+    constructor() {
+        this.bookingRepo = new BookingRepository(prisma);
+        this.carRepo = new CarRepository(prisma);
+        this.userRepo = new UserRepository(prisma);
     }
 
-    static async getReturnReadyBookings() {
-        return await prisma.booking.findMany({
-            where: {
-                status: BookingStatus.Active,
-            },
-            include: {
-                car: {
-                    include: {
-                        category: true,
-                        images: {
-                            where: {
-                                is_thumbnail: true,
-                            },
-                            take: 1,
-                        },
-                    },
-                },
-                customer: {
-                    include: {
-                        user: {
-                            select: {
-                                email: true,
-                                username: true,
-                                phone: true,
-                            },
-                        },
-                    },
-                },
-            },
-            orderBy: {
-                updated_at: "asc",
-            },
-        });
+    async getHandoverReadyBookings() {
+        return this.bookingRepo.findHandoverReady();
     }
 
-    static async getPendingBookings() {
-        return await prisma.booking.findMany({
-            where: {
-                status: BookingStatus.Pending,
-            },
-            include: {
-                car: {
-                    include: {
-                        category: true,
-                        images: {
-                            where: {
-                                is_thumbnail: true,
-                            },
-                            take: 1,
-                        },
-                    },
-                },
-                customer: {
-                    include: {
-                        user: {
-                            select: {
-                                email: true,
-                                username: true,
-                                phone: true,
-                            },
-                        },
-                    },
-                },
-            },
-            orderBy: {
-                created_at: "asc",
-            },
-        });
+    async getReturnReadyBookings() {
+        return this.bookingRepo.findReturnReady();
     }
 
-    static async getReviewHistoryBookings() {
-        return await prisma.booking.findMany({
-            where: {
-                status: {
-                    in: [BookingStatus.Confirmed, BookingStatus.Cancelled],
-                },
-            },
-            include: {
-                car: {
-                    include: {
-                        category: true,
-                        images: {
-                            where: {
-                                is_thumbnail: true,
-                            },
-                            take: 1,
-                        },
-                    },
-                },
-                customer: {
-                    include: {
-                        user: {
-                            select: {
-                                email: true,
-                                username: true,
-                                phone: true,
-                            },
-                        },
-                    },
-                },
-            },
-            orderBy: {
-                updated_at: "desc",
-            },
-        });
+    async getPendingBookings() {
+        return this.bookingRepo.findPending();
     }
 
-    static async createBooking(data: {
+    async getReviewHistoryBookings() {
+        return this.bookingRepo.findReviewHistory();
+    }
+
+    async createBooking(data: {
         customer_id: number;
         car_id: number;
         start_date: string;
@@ -168,12 +47,7 @@ export class BookingService {
             throw new Error("Start date must be before or equal to end date");
         }
 
-        // 1. Check if car exists and is not disabled
-        const car = await prisma.car.findUnique({
-            where: { car_id },
-            include: { category: true }
-        });
-
+        const car = await this.carRepo.findByIdWithCategory(car_id);
         if (!car) {
             throw new Error("Car not found");
         }
@@ -182,101 +56,37 @@ export class BookingService {
             throw new Error("This car is currently disabled and cannot be booked");
         }
 
-        // 2. Check for overlapping bookings
-        const overlaps = await prisma.booking.findMany({
-            where: {
-                car_id,
-                status: {
-                    in: [BookingStatus.Pending, BookingStatus.Confirmed, BookingStatus.Active, BookingStatus.Deposit_Paid]
-                },
-                AND: [
-                    { start_date: { lt: end } },
-                    { end_date: { gt: start } }
-                ]
-            }
-        });
-
+        const overlaps = await this.bookingRepo.findOverlapping(car_id, start, end);
         if (overlaps.length > 0) {
             throw new Error("The car is already booked for the selected timeframe");
         }
 
-        // 3. Calculate price
         const diffTime = Math.abs(end.getTime() - start.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         const totalPrice = new Prisma.Decimal(car.rental_price_per_day).mul(diffDays);
 
-        // 4. Create booking
-        return await prisma.booking.create({
-            data: {
-                customer_id,
-                car_id,
-                start_date: start,
-                end_date: end,
-                total_price: totalPrice,
-                total_paid: 0,
-                status: BookingStatus.Pending,
-                payment_status: PaymentStatus.Unpaid
-            },
-            include: {
-                car: true,
-                customer: true
-            }
+        return this.bookingRepo.create({
+            customer_id,
+            car_id,
+            start_date: start,
+            end_date: end,
+            total_price: totalPrice,
         });
     }
 
-    static async getBookedDates(car_id: number) {
-        return await prisma.booking.findMany({
-            where: {
-                car_id,
-                status: {
-                    in: [
-                        BookingStatus.Pending,
-                        BookingStatus.Confirmed,
-                        BookingStatus.Active,
-                        BookingStatus.Deposit_Paid
-                    ]
-                }
-            },
-            select: {
-                start_date: true,
-                end_date: true
-            },
-            orderBy: {
-                start_date: 'asc'
-            }
-        });
+    async getBookedDates(car_id: number) {
+        return this.bookingRepo.getBookedDateRanges(car_id);
     }
 
-    static async getCustomerBookings(customer_id: number) {
-        return await prisma.booking.findMany({
-            where: {
-                customer_id
-            },
-            include: {
-                car: {
-                    include: {
-                        images: {
-                            where: {
-                                is_thumbnail: true
-                            }
-                        },
-                        category: true
-                    }
-                }
-            },
-            orderBy: {
-                created_at: 'desc'
-            }
-        });
+    async getCustomerBookings(customer_id: number) {
+        return this.bookingRepo.findByCustomerId(customer_id);
     }
 
-    static async cancelBooking(booking_id: number, customer_id: number) {
-        const booking = await prisma.booking.findUnique({
-            where: { booking_id }
-        });
+    async cancelBooking(booking_id: number, customer_id: number) {
+        const booking = await this.bookingRepo.findById(booking_id);
 
         if (!booking) {
-            throw new Error("Booking not found");
+            throw new NotFoundError("Booking", booking_id);
         }
 
         if (booking.customer_id !== customer_id) {
@@ -286,80 +96,48 @@ export class BookingService {
         const allowableStatuses: BookingStatus[] = [
             BookingStatus.Pending,
             BookingStatus.Confirmed,
-            BookingStatus.Deposit_Paid
+            BookingStatus.Deposit_Paid,
         ];
 
         if (!allowableStatuses.includes(booking.status)) {
             throw new Error(`Cannot cancel booking with status: ${booking.status}`);
         }
 
-        return await prisma.booking.update({
-            where: { booking_id },
-            data: {
-                status: BookingStatus.Cancelled
-            }
-        });
+        return this.bookingRepo.updateStatus(booking_id, BookingStatus.Cancelled);
     }
 
-    static async approveBooking(booking_id: number) {
-        const booking = await prisma.booking.findUnique({
-            where: { booking_id }
-        });
+    async approveBooking(booking_id: number) {
+        const booking = await this.bookingRepo.findById(booking_id);
 
         if (!booking) {
-            throw new Error("Booking not found");
+            throw new NotFoundError("Booking", booking_id);
         }
 
         if (booking.status !== BookingStatus.Pending) {
             throw new Error(`Only pending bookings can be approved. Current status: ${booking.status}`);
         }
 
-        return await prisma.booking.update({
-            where: { booking_id },
-            data: {
-                status: BookingStatus.Confirmed
-            }
-        });
+        return this.bookingRepo.updateStatus(booking_id, BookingStatus.Confirmed);
     }
 
-    static async rejectBooking(booking_id: number, reason?: string) {
-        const booking = await prisma.booking.findUnique({
-            where: { booking_id }
-        });
+    async rejectBooking(booking_id: number) {
+        const booking = await this.bookingRepo.findById(booking_id);
 
         if (!booking) {
-            throw new Error("Booking not found");
+            throw new NotFoundError("Booking", booking_id);
         }
 
         if (booking.status !== BookingStatus.Pending) {
-            throw new Error(`Only pending bookings can be rejected. Current status: ${booking.status}`);
+            throw new Error(`Only pending bookings can be approved. Current status: ${booking.status}`);
         }
 
-        return await prisma.booking.update({
-            where: { booking_id },
-            data: {
-                status: BookingStatus.Cancelled
-            }
-        });
+        return this.bookingRepo.updateStatus(booking_id, BookingStatus.Cancelled);
     }
 
-    static async autoCancelNoShowBookings(graceHours: number) {
+    async autoCancelNoShowBookings(graceHours: number) {
+        const result = await this.bookingRepo.cancelNoShowBookings(graceHours);
         const hours = Number.isFinite(graceHours) && graceHours >= 0 ? graceHours : 0;
         const threshold = new Date(Date.now() - hours * 60 * 60 * 1000);
-
-        const result = await prisma.booking.updateMany({
-            where: {
-                status: {
-                    in: [BookingStatus.Confirmed, BookingStatus.Deposit_Paid],
-                },
-                start_date: {
-                    lte: threshold,
-                },
-            },
-            data: {
-                status: BookingStatus.Cancelled,
-            },
-        });
 
         return {
             cancelledCount: result.count,
@@ -367,7 +145,7 @@ export class BookingService {
         };
     }
 
-    static async handoverCar(
+    async handoverCar(
         booking_id: number,
         staff_user_id: number,
         data: {
@@ -389,7 +167,7 @@ export class BookingService {
         });
     }
 
-    static async receiveReturnedCar(
+    async receiveReturnedCar(
         booking_id: number,
         staff_user_id: number,
         data: {
@@ -411,7 +189,7 @@ export class BookingService {
         });
     }
 
-    private static async createInspection(input: {
+    private async createInspection(input: {
         booking_id: number;
         staff_user_id: number;
         type: InspectionType;
@@ -442,87 +220,43 @@ export class BookingService {
             throw new Error("fuel_level must be between 0 and 100");
         }
 
-        const staffProfile = await prisma.staffProfile.findUnique({
-            where: { user_id: staff_user_id },
-        });
-
+        const staffProfile = await this.userRepo.findStaffProfile(staff_user_id);
         if (!staffProfile) {
             throw new Error("Staff profile not found");
         }
 
-        const booking = await prisma.booking.findUnique({
-            where: { booking_id },
-        });
-
+        const booking = await this.bookingRepo.findById(booking_id);
         if (!booking) {
-            throw new Error("Booking not found");
+            throw new NotFoundError("Booking", booking_id);
         }
 
         if (!expectedBookingStatus.includes(booking.status)) {
             throw new Error(`Booking status must be one of: ${expectedBookingStatus.join(", ")}`);
         }
 
-        const existingInspection = await prisma.bookingInspection.findFirst({
-            where: {
-                booking_id,
-                type,
-            },
-        });
-
+        const existingInspection = await this.bookingRepo.findExistingInspection(booking_id, type);
         if (existingInspection) {
             throw new Error(`${type} inspection already exists for this booking`);
         }
 
-        return await prisma.$transaction(async (tx) => {
-            const inspection = await tx.bookingInspection.create({
-                data: {
-                    booking_id,
-                    staff_id: staffProfile.user_id,
-                    type,
-                    odometer_reading,
-                    fuel_level,
-                    condition_summary: condition_summary ?? null,
-                    customer_signature_url: customer_signature_url ?? null,
-                    items: {
-                        create: items.map((item) => ({
-                            item_name: item.item_name,
-                            status: item.status,
-                            notes: item.notes ?? null,
-                            photo_url: item.photo_url ?? null,
-                        })),
-                    },
-                },
-                include: {
-                    items: true,
-                    staff: {
-                        include: {
-                            user: {
-                                select: {
-                                    user_id: true,
-                                    username: true,
-                                    email: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            });
+        const staffProfileData = staffProfile as { user_id: number };
+        const inspectionData = {
+            odometer_reading,
+            fuel_level,
+            ...(condition_summary !== undefined ? { condition_summary } : {}),
+            ...(customer_signature_url !== undefined ? { customer_signature_url } : {}),
+            items,
+        };
+        const inspection = await this.bookingRepo.createInspection(
+            booking_id,
+            staffProfileData.user_id,
+            type,
+            inspectionData
+        );
 
-            await tx.booking.update({
-                where: { booking_id },
-                data: {
-                    status: nextBookingStatus,
-                },
-            });
+        await this.bookingRepo.updateStatus(booking_id, nextBookingStatus);
+        await this.carRepo.updateStatus(booking.car_id, nextCarStatus);
 
-            await tx.car.update({
-                where: { car_id: booking.car_id },
-                data: {
-                    status: nextCarStatus,
-                },
-            });
-
-            return inspection;
-        });
+        return inspection;
     }
 }

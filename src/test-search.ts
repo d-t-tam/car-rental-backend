@@ -1,11 +1,12 @@
 import { CarService } from "./services/car.service";
 import { prisma } from "./configs/prisma";
 
+const carService = new CarService();
+
 async function main() {
     console.log("Starting Car Search Verification...");
 
     try {
-        // 1. Create a test category if not exists
         const category = await prisma.carCategory.upsert({
             where: { category_id: 1 },
             update: {},
@@ -17,7 +18,6 @@ async function main() {
         });
         console.log("Category ready.");
 
-        // 2. Create some test cars
         await prisma.car.upsert({
             where: { license_plate: "TEST-001" },
             update: {},
@@ -55,19 +55,16 @@ async function main() {
         });
         console.log("Test cars ready.");
 
-        // 3. Test search by name
         console.log("Testing search by name 'Toyota'...");
-        const toyotaCars = await CarService.search({ name: "Toyota" });
+        const toyotaCars = await carService.search({ name: "Toyota" });
         console.log(`Found ${toyotaCars.length} cars. (Expected: 1)`);
 
-        // 4. Test search by price range
         console.log("Testing search by price range 450-550...");
-        const midRangeCars = await CarService.search({ min_price: 450, max_price: 550 });
+        const midRangeCars = await carService.search({ min_price: 450, max_price: 550 });
         console.log(`Found ${midRangeCars.length} cars. (Expected: 1)`);
 
-        // 5. Test search by status
         console.log("Testing search by status 'Rented'...");
-        const rentedCars = await CarService.search({ status: "Rented" });
+        const rentedCars = await carService.search({ status: "Rented" });
         console.log(`Found ${rentedCars.length} cars. (Expected: 1)`);
 
         if (toyotaCars.length === 1 && midRangeCars.length === 1 && rentedCars.length === 1) {

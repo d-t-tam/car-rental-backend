@@ -2,10 +2,12 @@ import { Response } from "express";
 import { BuildRequest } from "../middlewares/auth.middleware";
 import { BookingService } from "../services/booking.service";
 
+const bookingService = new BookingService();
+
 export class BookingController {
     static async getHandoverReady(req: BuildRequest, res: Response) {
         try {
-            const bookings = await BookingService.getHandoverReadyBookings();
+            const bookings = await bookingService.getHandoverReadyBookings();
             return res.status(200).json(bookings);
         } catch (error: any) {
             console.error("Get Handover Ready Bookings Error:", error);
@@ -15,7 +17,7 @@ export class BookingController {
 
     static async getReturnReady(req: BuildRequest, res: Response) {
         try {
-            const bookings = await BookingService.getReturnReadyBookings();
+            const bookings = await bookingService.getReturnReadyBookings();
             return res.status(200).json(bookings);
         } catch (error: any) {
             console.error("Get Return Ready Bookings Error:", error);
@@ -25,7 +27,7 @@ export class BookingController {
 
     static async getPending(req: BuildRequest, res: Response) {
         try {
-            const bookings = await BookingService.getPendingBookings();
+            const bookings = await bookingService.getPendingBookings();
             return res.status(200).json(bookings);
         } catch (error: any) {
             console.error("Get Pending Bookings Error:", error);
@@ -35,7 +37,7 @@ export class BookingController {
 
     static async getReviewHistory(req: BuildRequest, res: Response) {
         try {
-            const bookings = await BookingService.getReviewHistoryBookings();
+            const bookings = await bookingService.getReviewHistoryBookings();
             return res.status(200).json(bookings);
         } catch (error: any) {
             console.error("Get Review History Error:", error);
@@ -52,7 +54,7 @@ export class BookingController {
                 return res.status(400).json({ message: "car_id, start_date, and end_date are required" });
             }
 
-            const booking = await BookingService.createBooking({
+            const booking = await bookingService.createBooking({
                 customer_id,
                 car_id: Number(car_id),
                 start_date,
@@ -77,7 +79,7 @@ export class BookingController {
                 return res.status(400).json({ message: "car_id is required" });
             }
 
-            const bookedDates = await BookingService.getBookedDates(Number(car_id));
+            const bookedDates = await bookingService.getBookedDates(Number(car_id));
 
             return res.status(200).json(bookedDates);
         } catch (error: any) {
@@ -89,7 +91,7 @@ export class BookingController {
     static async getCustomerBookings(req: BuildRequest, res: Response) {
         try {
             const customer_id = req.user.userId;
-            const bookings = await BookingService.getCustomerBookings(customer_id);
+            const bookings = await bookingService.getCustomerBookings(customer_id);
 
             return res.status(200).json(bookings);
         } catch (error: any) {
@@ -108,7 +110,7 @@ export class BookingController {
                 return res.status(400).json({ message: "Booking ID is required" });
             }
 
-            const booking = await BookingService.cancelBooking(Number(id), customer_id);
+            const booking = await bookingService.cancelBooking(Number(id), customer_id);
 
             return res.status(200).json({
                 message: "Booking cancelled successfully",
@@ -127,7 +129,7 @@ export class BookingController {
                 return res.status(400).json({ message: "Booking ID is required" });
             }
 
-            const booking = await BookingService.approveBooking(Number(id));
+            const booking = await bookingService.approveBooking(Number(id));
 
             return res.status(200).json({
                 message: "Booking approved successfully",
@@ -142,12 +144,11 @@ export class BookingController {
     static async reject(req: BuildRequest, res: Response) {
         try {
             const { id } = req.params;
-            const { reason } = req.body;
             if (!id) {
                 return res.status(400).json({ message: "Booking ID is required" });
             }
 
-            const booking = await BookingService.rejectBooking(Number(id), reason);
+            const booking = await bookingService.rejectBooking(Number(id));
 
             return res.status(200).json({
                 message: "Booking rejected successfully",
@@ -178,7 +179,7 @@ export class BookingController {
                 return res.status(400).json({ message: "odometer_reading and fuel_level are required" });
             }
 
-            const inspection = await BookingService.handoverCar(Number(id), req.user.userId, {
+            const inspection = await bookingService.handoverCar(Number(id), req.user.userId, {
                 odometer_reading: Number(odometer_reading),
                 fuel_level: Number(fuel_level),
                 condition_summary,
@@ -215,7 +216,7 @@ export class BookingController {
                 return res.status(400).json({ message: "odometer_reading and fuel_level are required" });
             }
 
-            const inspection = await BookingService.receiveReturnedCar(Number(id), req.user.userId, {
+            const inspection = await bookingService.receiveReturnedCar(Number(id), req.user.userId, {
                 odometer_reading: Number(odometer_reading),
                 fuel_level: Number(fuel_level),
                 condition_summary,

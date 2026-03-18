@@ -1,15 +1,22 @@
 import { prisma } from "@/configs/prisma";
+import { UserRepository } from "@/repository/user.repository";
+import { NotFoundError } from "@/repository/errors";
 
 export class ProfileService {
-    static async getProfile(userId: number) {
-        const user = await prisma.user.findUnique({
-            where: { user_id: userId },
-            include: { customer_profile: true },
-        });
+    private userRepo: UserRepository;
 
-        if (!user) {
-            throw new Error("User not found");
+    constructor() {
+        this.userRepo = new UserRepository(prisma);
+    }
+
+    async getProfile(userId: number) {
+        const result = await this.userRepo.getCustomerProfile(userId);
+
+        if (!result) {
+            throw new NotFoundError("User", userId);
         }
+
+        const { user, profile } = result;
 
         return {
             user: {
@@ -21,57 +28,56 @@ export class ProfileService {
                 status: user.status,
                 created_at: user.created_at,
             },
-            profile: user.customer_profile,
+            profile,
         };
     }
 
-    static async updateProfile(userId: number, data: {
-        full_name?: string;
-        phone?: string;
-        license_number?: string;
-        address?: string;
-    }) {
-        const user = await prisma.user.findUnique({
-            where: { user_id: userId },
-            include: { customer_profile: true },
-        });
+    async updateProfile(
+        userId: number,
+        data: {
+            full_name?: string;
+            phone?: string;
+            license_number?: string;
+            address?: string;
+        }
+    ) {
+        const result = await this.userRepo.getCustomerProfile(userId);
 
-        if (!user) {
-            throw new Error("User not found");
+        if (!result) {
+            throw new NotFoundError("User", userId);
         }
 
-        if (user.role !== "Customer" || !user.customer_profile) {
+        if (result.user.role !== "Customer" || !result.profile) {
             throw new Error("Invalid user profile");
         }
 
-        const [updatedUser, updatedProfile] = await prisma.$transaction([
-            prisma.user.update({
-                where: { user_id: userId },
-                data: {
-                    phone: data.phone ?? user.phone,
-                },
-            }),
-            prisma.customerProfile.update({
-                where: { user_id: userId },
-                data: {
-                    full_name: data.full_name ?? user.customer_profile.full_name,
-                    license_number: data.license_number ?? user.customer_profile.license_number,
-                    address: data.address ?? user.customer_profile.address,
-                },
-            }),
-        ]);
+        const updateData: {
+            full_name?: string;
+            license_number?: string;
+            address?: string;
+        } = {};
+        
+        if (data.full_name !== undefined) updateData.full_name = data.full_name;
+        if (data.license_number !== undefined) updateData.license_number = data.license_number;
+        if (data.address !== undefined) updateData.address = data.address;
+        
+        const updated = await this.userRepo.updateCustomerProfile(userId, updateData);
+
+        if (data.phone && data.phone !== result.user.phone) {
+            await this.userRepo.updatePhone(userId, data.phone);
+        }
 
         return {
             user: {
-                user_id: updatedUser.user_id,
-                email: updatedUser.email,
-                username: updatedUser.username,
-                phone: updatedUser.phone,
-                role: updatedUser.role,
-                status: updatedUser.status,
-                created_at: updatedUser.created_at,
+                user_id: updated.user.user_id,
+                email: updated.user.email,
+                username: updated.user.username,
+                phone: updated.user.phone,
+                role: updated.user.role,
+                status: updated.user.status,
+                created_at: updated.user.created_at,
             },
-            profile: updatedProfile,
+            profile: updated.profile,
         };
     }
 }

@@ -1,9 +1,10 @@
 import { prisma } from "./configs/prisma";
 import { BookingService } from "./services/booking.service";
 
+const bookingService = new BookingService();
+
 async function testBooking() {
     try {
-        // 1. Get a test customer
         const customer = await prisma.user.findFirst({
             where: { role: 'Customer' }
         });
@@ -13,7 +14,6 @@ async function testBooking() {
             return;
         }
 
-        // 2. Get a test car
         const car = await prisma.car.findFirst({
             where: { status: 'Available' }
         });
@@ -25,13 +25,12 @@ async function testBooking() {
 
         console.log(`Testing booking for Customer ID: ${customer.user_id} and Car ID: ${car.car_id}`);
 
-        // 3. Create a valid booking
         const startDate = new Date();
         startDate.setDate(startDate.getDate() + 1);
         const endDate = new Date();
         endDate.setDate(endDate.getDate() + 3);
 
-        const booking = await BookingService.createBooking({
+        const booking = await bookingService.createBooking({
             customer_id: customer.user_id,
             car_id: car.car_id,
             start_date: startDate.toISOString(),
@@ -44,10 +43,9 @@ async function testBooking() {
             status: booking.status
         });
 
-        // 4. Try to create an overlapping booking
         try {
             console.log("Checking overlap detection...");
-            await BookingService.createBooking({
+            await bookingService.createBooking({
                 customer_id: customer.user_id,
                 car_id: car.car_id,
                 start_date: startDate.toISOString(),

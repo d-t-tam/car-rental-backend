@@ -1,10 +1,12 @@
 import { prisma } from "@/configs/prisma";
+import { UserRepository } from "@/repository/user.repository";
 import { signToken } from "@/utils/jwt";
 import { UserRole, UserStatus } from "../generated/prisma/client";
-import type { User, CustomerProfile } from "../generated/prisma/client";
 import bcrypt from "bcryptjs";
 
 export const AuthService = {
+    userRepo: new UserRepository(prisma),
+
     register: async (data: any) => {
         const { email, password, username, full_name, phone, license_number, address } = data;
 
@@ -20,29 +22,14 @@ export const AuthService = {
 
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const result = await prisma.$transaction(async (tx: any) => {
-            const newUser = await tx.user.create({
-                data: {
-                    email,
-                    username,
-                    password_hash: passwordHash,
-                    phone,
-                    role: UserRole.Customer,
-                    status: UserStatus.Active,
-                },
-            });
-
-            const newProfile = await tx.customerProfile.create({
-                data: {
-                    user_id: newUser.user_id,
-                    full_name,
-                    license_number,
-                    address,
-                    wallet_balance: 0,
-                },
-            });
-
-            return { user: newUser, profile: newProfile };
+        const result = await AuthService.userRepo.createUserWithProfile({
+            email,
+            username,
+            password_hash: passwordHash,
+            phone,
+            full_name,
+            license_number,
+            address,
         });
 
         const token = signToken({ userId: result.user.user_id, role: result.user.role });

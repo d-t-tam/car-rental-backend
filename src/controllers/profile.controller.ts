@@ -2,11 +2,13 @@ import { ProfileService } from "@/services/profile.service";
 import { BuildRequest } from "@/middlewares/auth.middleware";
 import { Response } from "express";
 
+const profileService = new ProfileService();
+
 export class ProfileController {
     static async getProfile(req: BuildRequest, res: Response) {
         try {
             const userId = req.user.userId;
-            const profile = await ProfileService.getProfile(userId);
+            const profile = await profileService.getProfile(userId);
             res.status(200).json(profile);
         } catch (error: any) {
             res.status(400).json({ message: error.message });
@@ -17,7 +19,7 @@ export class ProfileController {
         try {
             const userId = req.user.userId;
             const data = req.body;
-            const profile = await ProfileService.updateProfile(userId, data);
+            const profile = await profileService.updateProfile(userId, data);
             res.status(200).json(profile);
         } catch (error: any) {
             res.status(400).json({ message: error.message });
