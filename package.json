@@ -10,7 +10,10 @@
     "build": "tsc && tsc-alias",
     "start": "node ./dist/index.js",
     "dev": "tsx --watch src/index.ts",
-    "seed:staff": "tsx scripts/seed-staff.ts",
+    "seed": "tsx scripts/seed-users.ts && tsx scripts/seed-cars.ts",
+    "seed:users": "tsx scripts/seed-users.ts",
+    "seed:cars": "tsx scripts/seed-cars.ts",
+    "seed:staff": "tsx scripts/seed-users.ts",
     "lint": "eslint --fix .",
     "format": "prettier --write ."
   },

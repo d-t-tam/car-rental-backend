@@ -56,16 +56,11 @@ export class BookingService {
             throw new Error("This car is currently disabled and cannot be booked");
         }
 
-        const overlaps = await this.bookingRepo.findOverlapping(car_id, start, end);
-        if (overlaps.length > 0) {
-            throw new Error("The car is already booked for the selected timeframe");
-        }
-
         const diffTime = Math.abs(end.getTime() - start.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         const totalPrice = new Prisma.Decimal(car.rental_price_per_day).mul(diffDays);
 
-        return this.bookingRepo.create({
+        return this.bookingRepo.createWithLock({
             customer_id,
             car_id,
             start_date: start,

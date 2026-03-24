@@ -249,6 +249,61 @@ export class BookingRepository {
         });
     }
 
+    async createWithLock(data: {
+        customer_id: number;
+        car_id: number;
+        start_date: Date;
+        end_date: Date;
+        total_price: Prisma.Decimal;
+    }): Promise<Booking> {
+        return this.prisma.$transaction(async (tx) => {
+            // Lock the car row to prevent concurrent bookings
+            // The FOR UPDATE clause ensures that any other concurrent transaction
+            // trying to lock this same car row will wait until this one finishes.
+            await tx.$queryRaw`SELECT 1 FROM cars WHERE car_id = ${data.car_id} FOR UPDATE`;
+
+            // Now check for overlaps safely inside the lock
+            const overlaps = await tx.booking.findMany({
+                where: {
+                    car_id: data.car_id,
+                    status: {
+                        in: [
+                            BookingStatus.Pending,
+                            BookingStatus.Confirmed,
+                            BookingStatus.Active,
+                            BookingStatus.Deposit_Paid,
+                        ],
+                    },
+                    AND: [
+                        { start_date: { lt: data.end_date } },
+                        { end_date: { gt: data.start_date } },
+                    ],
+                },
+            });
+
+            if (overlaps.length > 0) {
+                throw new Error("The car is already booked for the selected timeframe");
+            }
+
+            return tx.booking.create({
+                data: {
+                    customer_id: data.customer_id,
+                    car_id: data.car_id,
+                    start_date: data.start_date,
+                    end_date: data.end_date,
+                    total_price: data.total_price,
+                    total_paid: 0,
+                    status: BookingStatus.Pending,
+                    payment_status: "Unpaid" as const,
+                },
+                include: {
+                    car: true,
+                    customer: true,
+                },
+            });
+        });
+    }
+
     async updateStatus(booking_id: number, status: BookingStatus): Promise<Booking> {
         return this.prisma.booking.update({
             where: { booking_id },
